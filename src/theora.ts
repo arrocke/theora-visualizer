@@ -50,6 +50,7 @@ export interface IdentificationHeader {
 }
 
 export function decodeCommonHeader(packet: OggPacket): HeaderType | undefined {
+	console.log(packet.byteOffset)
 	const headerType = packet.getUint8(0)
 	const magicNumber1 = packet.getUint16(1)
 	const magicNumber2 = packet.getUint16(3)
@@ -175,4 +176,28 @@ export function decodeCommentsHeader(stream: OggBitstream) {
 	// TODO
 
 	return {}
+}
+
+export function decodeSetupHeader(stream: OggBitstream) {
+	const packet = stream.pages[1]?.packets[1]
+	if (!packet) return
+
+	const headerType = decodeCommonHeader(packet)
+	if (headerType !== HeaderType.Setup) return
+
+	// TODO
+
+	return {}
+}
+
+export function decodeHeaders(stream: OggBitstream) {
+	const identification = decodeIdentificationHeader(stream)
+	const comments = decodeCommentsHeader(stream)
+	const setup = decodeSetupHeader(stream)
+
+	return {
+		identification,
+		comments,
+		setup
+	}
 }
