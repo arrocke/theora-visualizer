@@ -1,7 +1,7 @@
 import React from "react";
 import getServerFile from "./load-file";
 import { decodeBitstreams } from "./ogg";
-import { isTheoraBitstream } from "./theora";
+import { decodeIdentificationHeader, isTheoraBitstream } from "./theora";
 
 function App() {
 
@@ -9,7 +9,9 @@ function App() {
     getServerFile('/test.ogv').then(buffer => {
       const bitstreams = decodeBitstreams(buffer)
       const theoraStream = Object.values(bitstreams).find(isTheoraBitstream)
-      console.log(theoraStream)
+      const idHeader = decodeIdentificationHeader(theoraStream)
+      console.log(idHeader)
+      ;(window as any).stream = theoraStream
       ;(window as any).view = new DataView(buffer)
     })
   }, [])

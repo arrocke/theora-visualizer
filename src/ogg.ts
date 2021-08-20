@@ -6,6 +6,8 @@ const EOS_FLAG = 0x04
 const MAX_LACING_SIZE = 255
 const HEADER_SIZE = 27
 
+export type OggPacket = DataView
+
 export interface OggPage {
 	flags: {
 		continued: boolean
@@ -16,7 +18,7 @@ export interface OggPage {
 	serialNumber: number
 	pageNumber: number
 	checksum: number
-	packets: DataView[]
+	packets: OggPacket[]
 	size: number
 }
 
