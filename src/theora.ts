@@ -164,3 +164,15 @@ export function decodeIdentificationHeader(stream: OggBitstream): Identification
 		nmbs
 	}
 }
+
+export function decodeCommentsHeader(stream: OggBitstream) {
+	const packet = stream.pages[1]?.packets[0]
+	if (!packet) return
+
+	const headerType = decodeCommonHeader(packet)
+	if (headerType !== HeaderType.Comment) return
+
+	// TODO
+
+	return {}
+}

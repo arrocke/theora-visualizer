@@ -1,7 +1,7 @@
 import React from "react";
 import getServerFile from "./load-file";
 import { decodeBitstreams } from "./ogg";
-import { decodeIdentificationHeader, isTheoraBitstream } from "./theora";
+import { decodeCommentsHeader, decodeIdentificationHeader, isTheoraBitstream } from "./theora";
 
 function App() {
 
@@ -10,7 +10,8 @@ function App() {
       const bitstreams = decodeBitstreams(buffer)
       const theoraStream = Object.values(bitstreams).find(isTheoraBitstream)
       const idHeader = decodeIdentificationHeader(theoraStream)
-      console.log(idHeader)
+      const commentsHeader = decodeCommentsHeader(theoraStream)
+      console.log(idHeader, commentsHeader)
       ;(window as any).stream = theoraStream
       ;(window as any).view = new DataView(buffer)
     })
