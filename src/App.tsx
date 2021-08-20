@@ -1,13 +1,15 @@
 import React from "react";
 import getServerFile from "./load-file";
-import { decodePages } from "./ogg";
+import { decodeBitstreams } from "./ogg";
+import { isTheoraBitstream } from "./theora";
 
 function App() {
 
   React.useEffect(() => {
     getServerFile('/test.ogv').then(buffer => {
-      const pages = decodePages(buffer)
-      console.log(pages)
+      const bitstreams = decodeBitstreams(buffer)
+      const theoraStream = Object.values(bitstreams).find(isTheoraBitstream)
+      console.log(theoraStream)
       ;(window as any).view = new DataView(buffer)
     })
   }, [])

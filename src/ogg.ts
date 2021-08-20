@@ -20,6 +20,15 @@ export interface OggPage {
 	size: number
 }
 
+export interface OggBitstream {
+	serialNumber: number
+	pages: OggPage[]
+}
+
+export interface OggBitstreamMap {
+	[serialNumber: number]: OggBitstream | undefined
+}
+
 function validatePage(view: DataView, checksum: number): boolean {
 	return true
 }
@@ -95,4 +104,21 @@ export function decodePages(buffer: ArrayBuffer): OggPage[] {
 	}
 
 	return pages
+}
+
+export function decodeBitstreams(buffer: ArrayBuffer): OggBitstreamMap {
+	const pages = decodePages(buffer)
+	const bitstreams: { [serialNumber: string]: OggBitstream | undefined } = {}
+	for (const page of pages) {
+		let bitstream = bitstreams[page.serialNumber]
+		if (!bitstream) {
+			bitstream = {
+				serialNumber: page.serialNumber,
+				pages: []
+			}
+			bitstreams[page.serialNumber] = bitstream
+		}
+		bitstream.pages.push(page)
+	}
+	return bitstreams
 }
