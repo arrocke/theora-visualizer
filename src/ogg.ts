@@ -6,7 +6,59 @@ const EOS_FLAG = 0x04
 const MAX_LACING_SIZE = 255
 const HEADER_SIZE = 27
 
-export type OggPacket = DataView
+class OggPacketView {
+	private readonly byteOffsets: readonly number[]
+	constructor(private readonly views: readonly DataView[]) {
+		const { offsets } = this.views.reduce<{ byteOffset: number, offsets: number[] }>(
+			({ byteOffset, offsets }, view) => ({
+				offsets: [...offsets, byteOffset],
+				byteOffset: byteOffset + view.byteLength
+			}),
+			{ byteOffset: 0, offsets: [] }
+		)
+		this.byteOffsets = offsets
+	}
+
+	getInt8(byteOffset: number): number {
+		const index = this.byteOffsets.find(offset => byteOffset >= offset)!
+		const viewOffset = this.byteOffsets[index]
+		const view = this.views[index]
+		return view.getInt8(byteOffset - viewOffset)
+	}
+	getInt16(byteOffset: number): number {
+		throw new Error("Method not implemented.")
+	}
+	getInt32(byteOffset: number): number {
+		throw new Error("Method not implemented.")
+	}
+
+	getUint8(byteOffset: number): number {
+		const index = this.byteOffsets.find(offset => byteOffset >= offset)!
+		const viewOffset = this.byteOffsets[index]
+		const view = this.views[index]
+		return view.getUint8(byteOffset - viewOffset)
+	}
+	getUint16(byteOffset: number): number {
+		const byte1 = this.getUint8(byteOffset)
+		const byte2 = this.getUint8(byteOffset + 1)
+		return (byte1 << 8) | byte2
+	}
+	getUint32(byteOffset: number): number {
+		const word1 = this.getUint16(byteOffset)
+		const word2 = this.getUint16(byteOffset + 2)
+		return (word1 << 16) | word2
+	}
+}
+
+export type OggPacket = {
+	granulePosition: DataView,
+	data: OggPacketView
+}
+
+export type OggPacketChunk = {
+	terminated: boolean
+	data: DataView
+}
 
 export interface OggPage {
 	flags: {
@@ -18,13 +70,14 @@ export interface OggPage {
 	serialNumber: number
 	pageNumber: number
 	checksum: number
-	packets: OggPacket[]
+	packets: OggPacketChunk[]
 	size: number
 }
 
 export interface OggBitstream {
 	serialNumber: number
 	pages: OggPage[]
+	packets: OggPacket[]
 }
 
 export interface OggBitstreamMap {
@@ -81,7 +134,10 @@ export function decodePage(buffer: ArrayBuffer, offset: number): OggPage {
 	const packets = []
 	let packetOffset = offset + HEADER_SIZE + segmentCount
 	for (const packetSize of packetSizes) {
-		packets.push(new DataView(buffer, packetOffset, packetSize))
+		packets.push({
+			data: new DataView(buffer, packetOffset, packetSize),
+			terminated: packetSize % 255 !== 0
+		})
 		packetOffset += packetSize
 	}
 
@@ -111,16 +167,29 @@ export function decodePages(buffer: ArrayBuffer): OggPage[] {
 export function decodeBitstreams(buffer: ArrayBuffer): OggBitstreamMap {
 	const pages = decodePages(buffer)
 	const bitstreams: { [serialNumber: string]: OggBitstream | undefined } = {}
+	let packetChunks: DataView[] = []
 	for (const page of pages) {
 		let bitstream = bitstreams[page.serialNumber]
 		if (!bitstream) {
 			bitstream = {
 				serialNumber: page.serialNumber,
-				pages: []
+				pages: [],
+				packets: []
 			}
 			bitstreams[page.serialNumber] = bitstream
 		}
 		bitstream.pages.push(page)
+		for (const chunk of page.packets) {
+			if (chunk.terminated) {
+				bitstream.packets.push({
+					granulePosition: page.granulePosition,
+					data: new OggPacketView([...packetChunks, chunk.data])
+				})
+				packetChunks = []
+			} else {
+				packetChunks.push(chunk.data)
+			}
+		}
 	}
 	return bitstreams
 }

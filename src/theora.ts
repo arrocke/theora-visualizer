@@ -50,11 +50,10 @@ export interface IdentificationHeader {
 }
 
 export function decodeCommonHeader(packet: OggPacket): HeaderType | undefined {
-	console.log(packet.byteOffset)
-	const headerType = packet.getUint8(0)
-	const magicNumber1 = packet.getUint16(1)
-	const magicNumber2 = packet.getUint16(3)
-	const magicNumber3 = packet.getUint16(5)
+	const headerType = packet.data.getUint8(0)
+	const magicNumber1 = packet.data.getUint16(1)
+	const magicNumber2 = packet.data.getUint16(3)
+	const magicNumber3 = packet.data.getUint16(5)
 
 	const isTheoraHeader = magicNumber1 === MAGIC_NUMBER_1 && magicNumber2 === MAGIC_NUMBER_2 && magicNumber3 === MAGIC_NUMBER_3
 	const isHeaderPacket = (headerType & 0x80) === 0x80
@@ -65,61 +64,57 @@ export function decodeCommonHeader(packet: OggPacket): HeaderType | undefined {
 }
 
 export function isTheoraBitstream(stream: OggBitstream): boolean {
-	const packet = stream.pages[0]?.packets[0]
-	if (!packet) return false
-	return !!decodeCommonHeader(packet)
+	return !!decodeCommonHeader(stream.packets[0])
 }
 
 export function decodeIdentificationHeader(stream: OggBitstream): IdentificationHeader | undefined {
-	const packet = stream.pages[0]?.packets[0]
-	if (!packet) return
-
+	const packet = stream.packets[0]
 	const headerType = decodeCommonHeader(packet)
 	if (headerType !== HeaderType.Identification) return
 
 	// 6.2 2-3
-	const vmaj = packet.getUint8(7)
-	const vmin = packet.getUint8(8)
-	const vrev = packet.getUint8(9)
+	const vmaj = packet.data.getUint8(7)
+	const vmin = packet.data.getUint8(8)
+	const vrev = packet.data.getUint8(9)
 	if (vmaj !== VMAJ) return
 	if (vmin !== VMIN) return
 	const version = `${vmaj}.${vmin}.${vrev}`
 
 	// 6.2 5-6
-	const fmbw = packet.getUint16(10)
-	const fmbh = packet.getUint16(12)
+	const fmbw = packet.data.getUint16(10)
+	const fmbh = packet.data.getUint16(12)
 	if (fmbw <= 0 || fmbh <= 0) return
 
 	// 6.2 7-8
-	const picw = packet.getUint32(13) & 0x00FFFFFF
-	const pich = packet.getUint32(16) & 0x00FFFFFF
+	const picw = packet.data.getUint32(13) & 0x00FFFFFF
+	const pich = packet.data.getUint32(16) & 0x00FFFFFF
 	if (picw > fmbw * 16 || pich > fmbh * 16) return
 
 	// 6.2 9-10
-	const picx = packet.getUint8(20)
-	const picy = packet.getUint8(21)
+	const picx = packet.data.getUint8(20)
+	const picy = packet.data.getUint8(21)
 	if (picx > fmbw * 16 - picw || picy > fmbh * 16 - pich) return
 
 	// 6.2 11-12
-	const frn = packet.getUint32(22)
-	const frd = packet.getUint32(26)
+	const frn = packet.data.getUint32(22)
+	const frd = packet.data.getUint32(26)
 	if (frn === 0 || frd === 0) return
 
 	// 6.2 13-14
-	const parn = packet.getUint32(29) & 0x00FFFFFF
-	const pard = packet.getUint32(32) & 0x00FFFFFF
+	const parn = packet.data.getUint32(29) & 0x00FFFFFF
+	const pard = packet.data.getUint32(32) & 0x00FFFFFF
 
 	// 6.2 15
-	const cs = packet.getUint8(36)
+	const cs = packet.data.getUint8(36)
 	
 	// 6.2 16
-	const nombr = packet.getUint32(36) & 0x00FFFFFF
+	const nombr = packet.data.getUint32(36) & 0x00FFFFFF
 
 	// 6.2 17-20
-	const qual = (packet.getUint8(40) & 0b111111) >> 2
-	const kfgshift = (packet.getUint16(40) & 0b1111100000) >> 5
-	const pf = (packet.getUint8(41) & 0b11000) >> 3
-	const reserved = packet.getUint8(41) & 0b111
+	const qual = (packet.data.getUint8(40) & 0b111111) >> 2
+	const kfgshift = (packet.data.getUint16(40) & 0b1111100000) >> 5
+	const pf = (packet.data.getUint8(41) & 0b11000) >> 3
+	const reserved = packet.data.getUint8(41) & 0b111
 	if (pf === PixelFormat.Reserved || reserved !== 0) return
 
 	// 6.2 21-23
@@ -167,9 +162,7 @@ export function decodeIdentificationHeader(stream: OggBitstream): Identification
 }
 
 export function decodeCommentsHeader(stream: OggBitstream) {
-	const packet = stream.pages[1]?.packets[0]
-	if (!packet) return
-
+	const packet = stream.packets[1]
 	const headerType = decodeCommonHeader(packet)
 	if (headerType !== HeaderType.Comment) return
 
@@ -179,9 +172,7 @@ export function decodeCommentsHeader(stream: OggBitstream) {
 }
 
 export function decodeSetupHeader(stream: OggBitstream) {
-	const packet = stream.pages[1]?.packets[1]
-	if (!packet) return
-
+	const packet = stream.packets[2]
 	const headerType = decodeCommonHeader(packet)
 	if (headerType !== HeaderType.Setup) return
 
