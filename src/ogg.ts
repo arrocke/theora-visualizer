@@ -48,6 +48,22 @@ class OggPacketView {
 		const word2 = this.getUint16(byteOffset + 2)
 		return (word1 << 16) | word2
 	}
+
+	getBits(bitOffset: number, bitLength: number): number {
+		if (bitLength === 0) return 0
+		let byteOffset = Math.floor(bitOffset / 8)
+		const shift = 24 + bitOffset % 8
+		let bits = (this.getUint8(byteOffset) << shift) >>> shift
+		bitLength -= 8 - (bitOffset % 8)
+		byteOffset += 1
+		while (bitLength > 0) {
+			bits = (bits << 8) | this.getUint8(byteOffset)
+			bitLength -= 8
+			byteOffset += 1
+		}
+		bits = bits >>> -bitLength
+		return bits
+	}
 }
 
 export type OggPacket = {
