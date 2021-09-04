@@ -1,23 +1,27 @@
-import React from "react";
+import * as React from "react";
+import FileStream from "./FileStream";
 import getServerFile from "./load-file";
-import { decodeBitstreams } from "./ogg";
-import { decodeHeaders, isTheoraBitstream } from "./theora";
+
 
 function App() {
+  const [file, setFile] = React.useState<ArrayBuffer>()
+  const [byteOffset, setByteOffset] = React.useState(0)
 
   React.useEffect(() => {
     getServerFile('/test.ogv').then(buffer => {
-      const bitstreams = decodeBitstreams(buffer)
-      const theoraStream = Object.values(bitstreams).find(isTheoraBitstream)
-      const headers = decodeHeaders(theoraStream)
-      console.log(headers)
-      ;(window as any).stream = theoraStream
       ;(window as any).view = new DataView(buffer)
+      setFile(buffer)
     })
   }, [])
 
   return (
-    <video src="/test.ogv" />
+    <div>
+      {file && <div className="flex">
+        <button onClick={() => setByteOffset(x => Math.max(x - 1, 0))}>Back</button>
+        <FileStream file={file} byteOffset={byteOffset} className="m-2 w-full" />
+        <button onClick={() => setByteOffset(x => Math.min(x + 1, file.byteLength - 1))}>Forward</button>
+      </div>}
+    </div>
   );
 }
 

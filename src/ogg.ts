@@ -77,6 +77,7 @@ export type OggPacketChunk = {
 }
 
 export interface OggPage {
+	byteOffset: number
 	flags: {
 		continued: boolean
 		bos: boolean
@@ -158,6 +159,7 @@ export function decodePage(buffer: ArrayBuffer, offset: number): OggPage {
 	}
 
 	return {
+		byteOffset: offset,
 		flags,
 		granulePosition,
 		serialNumber,
@@ -180,8 +182,7 @@ export function decodePages(buffer: ArrayBuffer): OggPage[] {
 	return pages
 }
 
-export function decodeBitstreams(buffer: ArrayBuffer): OggBitstreamMap {
-	const pages = decodePages(buffer)
+export function decodeBitstreams(pages: OggPage[]): OggBitstreamMap {
 	const bitstreams: { [serialNumber: string]: OggBitstream | undefined } = {}
 	let packetChunks: DataView[] = []
 	for (const page of pages) {
